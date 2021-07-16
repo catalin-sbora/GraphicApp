@@ -1,8 +1,10 @@
 ﻿using GraphicApp.Abstractions;
 using System;
+using System.ComponentModel.Composition;
 
 namespace CirclePlugin
 {
+    [Export(typeof(IGraphicPlugin))]
     public class CirclePlugin : IGraphicPlugin
     {
         public CirclePlugin()

@@ -1,6 +1,8 @@
 ﻿using GraphicApp.Abstractions;
 using System;
 using System.Collections.Generic;
+using System.ComponentModel.Composition;
+using System.ComponentModel.Composition.Hosting;
 using System.IO;
 using System.Linq;
 using System.Reflection;
@@ -11,37 +13,37 @@ namespace GraphicApp
 {
     public class PluginsManager
     {
-        private Dictionary<string, IGraphicPlugin> plugins = new Dictionary<string, IGraphicPlugin>();
+        /*
+         * Use this to automatically load the plugins
+         */
+        [ImportMany(typeof(IGraphicPlugin))]
+        private IEnumerable<IGraphicPlugin> pluginList;     
+       
+        /*
+         * Keep the plugins indexed by identifier
+         */
+        private Dictionary<string, IGraphicPlugin> pluginsDictionary = new Dictionary<string, IGraphicPlugin>();
         public void LoadPlugins(string directory)
         {
-          
-            var pluginFiles = Directory.GetFiles(directory, "*.dll");
-            foreach (var filePath in pluginFiles)
-            {
-                Assembly currentAssembly = Assembly.LoadFrom(filePath);
-                var exportedTypes = currentAssembly.GetExportedTypes();
-                var currentPluginType = exportedTypes.Where(exportedType => exportedType
-                                                    .IsAssignableTo(typeof(IGraphicPlugin)))
-                             .SingleOrDefault();
-                
-                if (currentPluginType != null)
-                {
-                    var currentPlugin = (IGraphicPlugin)Activator.CreateInstance(currentPluginType);
-                    plugins.Add(currentPlugin.Identifier.ToString(), currentPlugin);
-                }
+            DirectoryCatalog catalog = new DirectoryCatalog(directory);
+            CompositionContainer composition = new CompositionContainer(catalog);
+            composition.ComposeParts(this);
 
-            }
+            foreach (var plugin in pluginList)
+            {
+                pluginsDictionary[plugin.Identifier.ToString()] = plugin;
+            }            
             
         }
         public IReadOnlyCollection<IGraphicPlugin> GetPlugins()
         {
-            return plugins.Values
+            return pluginsDictionary.Values
                           .ToList()
                           .AsReadOnly();
         }
         public IGraphicPlugin GetPluginByIdentifier(string identifier) 
         {
-            return plugins[identifier];
+            return pluginsDictionary[identifier];
         }
     }
 }
